@@ -1,6 +1,7 @@
-
+import 'dart:async';
 
 import 'package:date_picker_timeline/date_widget.dart';
+import 'package:date_picker_timeline/datetimehelper/datetimehelper.dart';
 import 'package:date_picker_timeline/extra/color.dart';
 import 'package:date_picker_timeline/extra/style.dart';
 import 'package:date_picker_timeline/gestures/tap.dart';
@@ -27,6 +28,9 @@ class DatePicker extends StatefulWidget {
   /// Background color for the selector
   final Color selectionColor;
 
+  ///Background color for swipe handling
+  final Color swipeSelectionColor;
+
   /// Text Color for the deactivated dates
   final Color deactivatedColor;
 
@@ -40,7 +44,7 @@ class DatePicker extends StatefulWidget {
   final TextStyle dateTextStyle;
 
   /// Current Selected Date
-  final DateTime?/*?*/ initialSelectedDate;
+  final DateTime? /*?*/ initialSelectedDate;
 
   /// Contains the list of inactive dates.
   /// All the dates defined in this List will be deactivated
@@ -60,6 +64,12 @@ class DatePicker extends StatefulWidget {
   /// Locale for the calendar default: en_us
   final String locale;
 
+  /// Show dates in reverse order or not
+  final bool reverseDays;
+
+  /// Timeout to swipe in ms
+  final Duration swipeTimeout;
+
   DatePicker(
     this.startDate, {
     Key? key,
@@ -72,12 +82,15 @@ class DatePicker extends StatefulWidget {
     this.selectedTextColor = Colors.white,
     this.selectionColor = AppColors.defaultSelectionColor,
     this.deactivatedColor = AppColors.defaultDeactivatedColor,
+    this.swipeSelectionColor = AppColors.defaultSwipeSelectionColor,
     this.initialSelectedDate,
     this.activeDates,
     this.inactiveDates,
     this.daysCount = 500,
     this.onDateChange,
     this.locale = "en_US",
+    this.reverseDays = false,
+    this.swipeTimeout = const Duration(milliseconds: 1000),
   }) : assert(
             activeDates == null || inactiveDates == null,
             "Can't "
@@ -89,6 +102,7 @@ class DatePicker extends StatefulWidget {
 
 class _DatePickerState extends State<DatePicker> {
   DateTime? _currentDate;
+  DateTime? _swipeCurrentDate;
 
   ScrollController _controller = ScrollController();
 
@@ -105,16 +119,16 @@ class _DatePickerState extends State<DatePicker> {
     // Init the calendar locale
     initializeDateFormatting(widget.locale, null);
     // Set initial Values
-    _currentDate = widget.initialSelectedDate;
+    _currentDate = widget.initialSelectedDate!.dateWithoutTime();
 
     if (widget.controller != null) {
-      widget.controller!.setDatePickerState(this);
+      widget.controller!._setDatePickerState(this);
     }
 
     this.selectedDateStyle =
-      widget.dateTextStyle.copyWith(color: widget.selectedTextColor);
+        widget.dateTextStyle.copyWith(color: widget.selectedTextColor);
     this.selectedMonthStyle =
-      widget.monthTextStyle.copyWith(color: widget.selectedTextColor);
+        widget.monthTextStyle.copyWith(color: widget.selectedTextColor);
     this.selectedDayStyle =
         widget.dayTextStyle.copyWith(color: widget.selectedTextColor);
 
@@ -133,6 +147,7 @@ class _DatePickerState extends State<DatePicker> {
     return Container(
       height: widget.height,
       child: ListView.builder(
+        reverse: widget.reverseDays,
         itemCount: widget.daysCount,
         scrollDirection: Axis.horizontal,
         controller: _controller,
@@ -140,16 +155,17 @@ class _DatePickerState extends State<DatePicker> {
           // get the date object based on the index position
           // if widget.startDate is null then use the initialDateValue
           DateTime date;
-          DateTime _date = widget.startDate.add(Duration(days: index));
-          date = new DateTime(_date.year, _date.month, _date.day);
+          //Duration removed because of daylight saving will mess things up
+          //DateTime _date = widget.startDate.add(Duration(days: index));
+          DateTime _date = widget.startDate.addDays(index);
+          date = _date.dateWithoutTime();
 
           bool isDeactivated = false;
 
           // check if this date needs to be deactivated for only DeactivatedDates
           if (widget.inactiveDates != null) {
-//            print("Inside Inactive dates.");
             for (DateTime inactiveDate in widget.inactiveDates!) {
-              if (_compareDate(date, inactiveDate)) {
+              if (date.compareDateWithoutTime(inactiveDate)) {
                 isDeactivated = true;
                 break;
               }
@@ -161,7 +177,7 @@ class _DatePickerState extends State<DatePicker> {
             isDeactivated = true;
             for (DateTime activateDate in widget.activeDates!) {
               // Compare the date if it is in the
-              if (_compareDate(date, activateDate)) {
+              if (date.compareDateWithoutTime(activateDate)) {
                 isDeactivated = false;
                 break;
               }
@@ -170,7 +186,12 @@ class _DatePickerState extends State<DatePicker> {
 
           // Check if this date is the one that is currently selected
           bool isSelected =
-              _currentDate != null ? _compareDate(date, _currentDate!) : false;
+              _currentDate != null ? date.compareDateWithoutTime(_currentDate!) : false;
+
+          // Check if a swipe date is set
+          bool isSwipeSelected = _swipeCurrentDate != null
+              ? date.compareDateWithoutTime(_swipeCurrentDate!)
+              : false;
 
           // Return the Date Widget
           return DateWidget(
@@ -192,19 +213,17 @@ class _DatePickerState extends State<DatePicker> {
                     : widget.dayTextStyle,
             width: widget.width,
             locale: widget.locale,
-            selectionColor:
-                isSelected ? widget.selectionColor : Colors.transparent,
+            selectionColor: isSelected
+                ? widget.selectionColor
+                : isSwipeSelected
+                    ? widget.swipeSelectionColor
+                    : Colors.transparent,
             onDateSelected: (selectedDate) {
               // Don't notify listener if date is deactivated
               if (isDeactivated) return;
 
-              // A date is selected
-              if (widget.onDateChange != null) {
-                widget.onDateChange!(selectedDate);
-              }
-              setState(() {
-                _currentDate = selectedDate;
-              });
+              //Call the onDateSelected
+              onDateSelected(selectedDate);
             },
           );
         },
@@ -212,19 +231,32 @@ class _DatePickerState extends State<DatePicker> {
     );
   }
 
-  /// Helper function to compare two dates
-  /// Returns True if both dates are the same
-  bool _compareDate(DateTime date1, DateTime date2) {
-    return date1.day == date2.day &&
-        date1.month == date2.month &&
-        date1.year == date2.year;
+  //Helper to call onDateSelected which trigger onDateChange if enabled
+  void onDateSelected(DateTime selectedDate) {
+    // A date is selected
+    if (widget.onDateChange != null) {
+      widget.onDateChange!(selectedDate);
+    }
+    setState(() {
+      _currentDate = selectedDate;
+      _swipeCurrentDate = _currentDate;
+    });
+  }
+
+  /// Swipedate set, will mark a date with "swipe color" and select it if timed out
+  void setSwipeDate(DateTime date)
+  {
+    setState(() {
+      _swipeCurrentDate = date;
+    });
   }
 }
 
 class DatePickerController {
   _DatePickerState? _datePickerState;
+  Timer? _swipeTimer;
 
-  void setDatePickerState(_DatePickerState state) {
+  void _setDatePickerState(_DatePickerState state) {
     _datePickerState = state;
   }
 
@@ -239,7 +271,8 @@ class DatePickerController {
 
   /// This function will animate the Timeline to the currently selected Date
   void animateToSelection(
-      {duration = const Duration(milliseconds: 500), curve = Curves.linear}) {
+      {duration = const Duration(milliseconds: 500),
+      curve = Curves.easeInOut}) {
     assert(_datePickerState != null,
         'DatePickerController is not attached to any DatePicker View.');
 
@@ -253,9 +286,13 @@ class DatePickerController {
   /// This function will animate to any date that is passed as an argument
   /// In case a date is out of range nothing will happen
   void animateToDate(DateTime date,
-      {duration = const Duration(milliseconds: 500), curve = Curves.linear}) {
+      {duration = const Duration(milliseconds: 500),
+      curve = Curves.easeInOut}) {
     assert(_datePickerState != null,
         'DatePickerController is not attached to any DatePicker View.');
+
+    //Ignore timestamp in DateTime
+    date = date.dateWithoutTime();
 
     _datePickerState!._controller.animateTo(_calculateDateOffset(date),
         duration: duration, curve: curve);
@@ -264,30 +301,92 @@ class DatePickerController {
   /// This function will animate to any date that is passed as an argument
   /// this will also set that date as the current selected date
   void setDateAndAnimate(DateTime date,
-      {duration = const Duration(milliseconds: 500), curve = Curves.linear}) {
+      {duration = const Duration(milliseconds: 500),
+      curve = Curves.easeInOut}) {
     assert(_datePickerState != null,
-    'DatePickerController is not attached to any DatePicker View.');
+        'DatePickerController is not attached to any DatePicker View.');
+
+    //Ignore timestamp in DateTime
+    date = date.dateWithoutTime();
 
     _datePickerState!._controller.animateTo(_calculateDateOffset(date),
         duration: duration, curve: curve);
 
     if (date.compareTo(_datePickerState!.widget.startDate) >= 0 &&
-    date.compareTo(_datePickerState!.widget.startDate.add(
-        Duration(days: _datePickerState!.widget.daysCount))) <= 0) {
+        date.compareTo(_datePickerState!.widget.startDate
+                .add(Duration(days: _datePickerState!.widget.daysCount))) <=
+            0) {
       // date is in the range
-      _datePickerState!._currentDate = date;
+      //Call the onDateSelected which enabled also callback to the main class
+      _datePickerState!.onDateSelected(date);
     }
+  }
+
+  /// Swipe handling (easy way to move dates with swipe anywhere)
+  void swipeSelection(int days) {
+    assert(_datePickerState != null,
+        'DatePickerController is not attached to any DatePicker View.');
+    if (_datePickerState!._swipeCurrentDate == null) {
+      _datePickerState!._swipeCurrentDate = _datePickerState!._currentDate;
+    }
+
+    //Find start and enddate to ensure we don't go past it
+    final startDate = _datePickerState!.widget.startDate
+        .dateWithoutTime();
+    final endDate = startDate
+        .addDays(_datePickerState!.widget.daysCount-1);
+
+    //No love when we are at the start or end
+    if(_datePickerState!._swipeCurrentDate!.compareDateWithoutTime(startDate) && days < 0) return;
+    if(_datePickerState!._swipeCurrentDate!.compareDateWithoutTime(endDate) && days > 0) return;
+
+    //Adds days to the swipedate
+    _datePickerState!.setSwipeDate(_datePickerState!._swipeCurrentDate!.addDays(days));
+    animateToDate(_datePickerState!._swipeCurrentDate!);
+
+    //Cancel old swipe timer if it was running
+    if(_swipeTimer != null)
+      {
+        if(_swipeTimer!.isActive) _swipeTimer!.cancel();
+      }
+
+    //Make new timer that will select current swipe date when timed out
+    _swipeTimer = Timer(_datePickerState!.widget.swipeTimeout, () {
+      _datePickerState!.onDateSelected(_datePickerState!._swipeCurrentDate!);
+    });
   }
 
   /// Calculate the number of pixels that needs to be scrolled to go to the
   /// date provided in the argument
   double _calculateDateOffset(DateTime date) {
-    final startDate = new DateTime(
-        _datePickerState!.widget.startDate.year,
-        _datePickerState!.widget.startDate.month,
-        _datePickerState!.widget.startDate.day);
+    //Remove time from startDate
+    final startDate = _datePickerState!.widget.startDate.dateWithoutTime();
 
+    //Get offset between dates
     int offset = date.difference(startDate).inDays;
-    return (offset * _datePickerState!.widget.width) + (offset * 6);
+
+    //Get widget size and set the date as second to the right
+    double width = _datePickerState!.context.size!.width;
+
+    //Find how many dates are showing, using with of widget
+    double numInWidth = width / _datePickerState!.widget.width;
+    double restDecimalWidth = numInWidth - numInWidth.toInt();
+    int daysToEnd = _datePickerState!.widget.daysCount - offset;
+
+    //Handle offset with right-hand
+    if (offset > numInWidth.toInt() - 2) {
+      //Offset corrected based on how many days are left
+      offset = offset - (numInWidth.toInt() - (daysToEnd > 1 ? 2 : 1));
+    } else {
+      offset = 0;
+    }
+
+    //margin: EdgeInsets.all(3.0) in widget
+    int widgetMargin = 6;
+
+    return (offset * _datePickerState!.widget.width) +
+        (offset * widgetMargin) +
+        (restDecimalWidth *
+            widgetMargin); //Offset for the decimalplaces in width
   }
 }

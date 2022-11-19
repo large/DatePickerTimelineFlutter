@@ -37,6 +37,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    Duration duration = Duration(days: -28);
+    
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         child: Icon(Icons.replay),
@@ -47,43 +49,62 @@ class _MyHomePageState extends State<MyHomePage> {
         appBar: AppBar(
           title: Text(widget.title!),
         ),
-        body: Container(
-          padding: EdgeInsets.all(20.0),
-          color: Colors.blueGrey[100],
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Text("You Selected:"),
-              Padding(
-                padding: EdgeInsets.all(10),
-              ),
-              Text(_selectedValue.toString()),
-              Padding(
-                padding: EdgeInsets.all(20),
-              ),
-              Container(
-                child: DatePicker(
-                  DateTime.now(),
-                  width: 60,
-                  height: 80,
-                  controller: _controller,
-                  initialSelectedDate: DateTime.now(),
-                  selectionColor: Colors.black,
-                  selectedTextColor: Colors.white,
-                  inactiveDates: [
-                    DateTime.now().add(Duration(days: 3)),
-                    DateTime.now().add(Duration(days: 4)),
-                    DateTime.now().add(Duration(days: 7))
-                  ],
-                  onDateChange: (date) {
-                    // New date selected
-                    setState(() {
-                      _selectedValue = date;
-                    });
-                  },
+        body: GestureDetector(
+          onHorizontalDragEnd:(details)
+          {
+            if(details.primaryVelocity == null) return;
+            if(details.primaryVelocity! < 0) {
+              // drag from right to left
+              //debugPrint("Right to left ${details.primaryVelocity!}");
+              if(details.primaryVelocity! < -1500) _controller.swipeSelection(-1);
+            }else{
+              //debugPrint("Left to right");
+              if(details.primaryVelocity! > 1500) _controller.swipeSelection(1);
+            }
+          },
+          child: Container(
+            padding: EdgeInsets.all(20.0),
+            color: Colors.blueGrey[100],
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Text("You Selected:"),
+                Padding(
+                  padding: EdgeInsets.all(10),
                 ),
-              ),
-            ],
+                Text(_selectedValue.toString()),
+                Padding(
+                  padding: EdgeInsets.all(20),
+                ),
+                Container(
+                  child: DatePicker(
+                    DateTime.now().add(duration),
+                    daysCount: 30,
+                    width: 60,
+                    height: 80,
+                    controller: _controller,
+                    initialSelectedDate: DateTime.now(),
+                    selectionColor: Colors.black,
+                    selectedTextColor: Colors.white,
+                    inactiveDates: [
+                      DateTime.now().add(Duration(days: 3)),
+                      DateTime.now().add(Duration(days: 4)),
+                      DateTime.now().add(Duration(days: 7))
+                    ],
+                    onDateChange: (date) {
+                      // New date selected
+                      setState(() {
+                        _selectedValue = date;
+                      });
+                    },
+                  ),
+                ),
+                TextButton(onPressed: () {
+                  Duration duration = Duration(days: -3);
+                  _controller.setDateAndAnimate(DateTime.now().add(duration));
+                }, child: Text("Do it")),
+              ],
+            ),
           ),
         ));
   }
