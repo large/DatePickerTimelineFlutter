@@ -1,4 +1,5 @@
 import 'package:date_picker_timeline/date_picker_timeline.dart';
+import 'package:date_picker_timeline/datetimehelper/datetimehelper.dart';
 import 'package:flutter/material.dart';
 
 void main() => runApp(MyApp());
@@ -27,7 +28,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   DatePickerController _controller = DatePickerController();
 
-  DateTime _selectedValue = DateTime.now();
+  DateTime _selectedValue = DateTime.now().dateWithoutTime();
 
 
   @override
@@ -50,6 +51,7 @@ class _MyHomePageState extends State<MyHomePage> {
           title: Text(widget.title!),
         ),
         body: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onHorizontalDragEnd:(details)
           {
             if(details.primaryVelocity == null) return;
@@ -66,7 +68,6 @@ class _MyHomePageState extends State<MyHomePage> {
             padding: EdgeInsets.all(20.0),
             color: Colors.blueGrey[100],
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 Text("You Selected:"),
                 Padding(
@@ -76,33 +77,32 @@ class _MyHomePageState extends State<MyHomePage> {
                 Padding(
                   padding: EdgeInsets.all(20),
                 ),
-                Container(
-                  child: DatePicker(
-                    DateTime.now().add(duration),
-                    daysCount: 30,
-                    width: 60,
-                    height: 80,
-                    controller: _controller,
-                    initialSelectedDate: DateTime.now(),
-                    selectionColor: Colors.black,
-                    selectedTextColor: Colors.white,
-                    inactiveDates: [
-                      DateTime.now().add(Duration(days: 3)),
-                      DateTime.now().add(Duration(days: 4)),
-                      DateTime.now().add(Duration(days: 7))
-                    ],
-                    onDateChange: (date) {
-                      // New date selected
-                      setState(() {
-                        _selectedValue = date;
-                      });
-                    },
-                  ),
+                DatePicker(
+                  DateTime.now().add(duration),
+                  daysCount: 30,
+                  width: 60,
+                  height: 80,
+                  controller: _controller,
+                  initialSelectedDate: DateTime.now(),
+                  selectionColor: Colors.black,
+                  selectedTextColor: Colors.white,
+                  inactiveDates: [
+                    DateTime.now().add(Duration(days: 3)),
+                    DateTime.now().add(Duration(days: 4)),
+                    DateTime.now().add(Duration(days: 7))
+                  ],
+                  onDateChange: (date) {
+                    // New date selected
+                    setState(() {
+                      _selectedValue = date;
+                    });
+                  },
                 ),
                 TextButton(onPressed: () {
                   Duration duration = Duration(days: -3);
                   _controller.setDateAndAnimate(DateTime.now().add(duration));
-                }, child: Text("Do it")),
+                }, child: Text("Select today minus 3 days")),
+                Text("Swipe right and left to move dates"),
               ],
             ),
           ),

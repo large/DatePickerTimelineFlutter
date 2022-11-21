@@ -11,6 +11,7 @@ import 'package:intl/intl.dart';
 
 class DateWidget extends StatelessWidget {
   final double? width;
+  final double margin;
   final DateTime date;
   final TextStyle? monthTextStyle, dayTextStyle, dateTextStyle;
   final Color selectionColor;
@@ -23,6 +24,7 @@ class DateWidget extends StatelessWidget {
     required this.dayTextStyle,
     required this.dateTextStyle,
     required this.selectionColor,
+    required this.margin,
     this.width,
     this.onDateSelected,
     this.locale,
@@ -33,7 +35,7 @@ class DateWidget extends StatelessWidget {
     return InkWell(
       child: Container(
         width: width,
-        margin: EdgeInsets.all(3.0),
+        margin: EdgeInsets.all(margin),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.all(Radius.circular(8.0)),
           color: selectionColor,

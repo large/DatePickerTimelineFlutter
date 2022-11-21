@@ -15,4 +15,5 @@ class AppColors {
   static const Color defaultSelectionColor = Color(0x30000000);
   static const Color defaultDeactivatedColor = Color(0xFF666666);
   static const Color defaultSwipeSelectionColor = Colors.greenAccent;
+  static const Color defaultBackgroundColor = Colors.transparent;
 }
