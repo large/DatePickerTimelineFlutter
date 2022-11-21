@@ -403,20 +403,22 @@ class DatePickerController {
 
     //Find how many dates are showing, using with of widget
     double numInWidth = width / (_datePickerState!.widget.width + widgetMargin * 2);
+    double numInWidthDecimal = numInWidth - numInWidth.toInt();
     int daysToEnd = _datePickerState!.widget.daysCount - offset;
 
     //Handle offset with right-hand
-    if (offset > numInWidth.toInt() - 1) {
+    if (offset > numInWidth.toInt() - 2) {
       //Offset corrected based on how many days are left
-      offset = offset - (numInWidth.toInt() - 1);
-      //Last day we do not increase, stay put
-      if (daysToEnd == 1) offset = offset - 1;
+      offset = offset - (numInWidth.toInt() - 2);
+      //Last day(s) we do not increase, stay put
+      if (daysToEnd == 2) offset = offset - 1;
+      if (daysToEnd == 1) offset = offset - 2;
     } else {
       offset = 0;
     }
 
     return (offset * _datePickerState!.widget.width) +
         (offset * widgetMargin * 2) +
-        (widgetMargin); //Offset for the first item
+        (daysToEnd <= 2 ? ((_datePickerState!.widget.width) * (1-numInWidthDecimal)) + widgetMargin : widgetMargin); //Offset for the first item
   }
 }

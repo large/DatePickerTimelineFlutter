@@ -65,7 +65,7 @@ class _MyHomePageState extends State<MyHomePage> {
             }
           },
           child: Container(
-            padding: EdgeInsets.all(20.0),
+            //padding: EdgeInsets.all(26.0),
             color: Colors.blueGrey[100],
             child: Column(
               children: <Widget>[
@@ -86,6 +86,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   initialSelectedDate: DateTime.now(),
                   selectionColor: Colors.black,
                   selectedTextColor: Colors.white,
+                  backgroundColor: Colors.redAccent,
                   inactiveDates: [
                     DateTime.now().add(Duration(days: 3)),
                     DateTime.now().add(Duration(days: 4)),
