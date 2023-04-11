@@ -125,8 +125,6 @@ class _DatePickerState extends State<DatePicker> {
   late final TextStyle deactivatedMonthStyle;
   late final TextStyle deactivatedDayStyle;
 
-
-
   @override
   void initState() {
     // Init the calendar locale
@@ -156,19 +154,19 @@ class _DatePickerState extends State<DatePicker> {
   }
 
   /// Called after build and will ensure the item selected is scrolled to
-  void _onAfterBuild(BuildContext context)
-  {
-    if(startUp)
-      {
-        widget.controller!.animateToSelection();
-        startUp = false;
-      }
+  void _onAfterBuild(BuildContext context) {
+    if (startUp) {
+      widget.controller!.animateToSelection();
+      startUp = false;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     //Ensure selected item is scrolled to
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {_onAfterBuild(context);});
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      _onAfterBuild(context);
+    });
 
     return Container(
       height: widget.height,
@@ -289,25 +287,27 @@ class DatePickerController {
     _datePickerState = state;
   }
 
-  void jumpToSelection() {
+  void jumpToSelection({bool scrollOneExtraPosition = false}) {
     assert(_datePickerState != null,
         'DatePickerController is not attached to any DatePicker View.');
 
     // jump to the current Date
     _datePickerState!._controller
-        .jumpTo(_calculateDateOffset(_datePickerState!._currentDate!));
+        .jumpTo(_calculateDateOffset(_datePickerState!._currentDate!, scrollOneDayAhead: scrollOneExtraPosition));
   }
 
   /// This function will animate the Timeline to the currently selected Date
   void animateToSelection(
       {duration = const Duration(milliseconds: 500),
-      curve = Curves.easeInOut}) {
+      curve = Curves.easeInOut,
+      bool scrollOneExtraPosition = false}) {
     assert(_datePickerState != null,
         'DatePickerController is not attached to any DatePicker View.');
 
     // animate to the current date
     _datePickerState!._controller.animateTo(
-        _calculateDateOffset(_datePickerState!._currentDate!),
+        _calculateDateOffset(_datePickerState!._currentDate!,
+            scrollOneDayAhead: scrollOneExtraPosition),
         duration: duration,
         curve: curve);
   }
@@ -388,12 +388,17 @@ class DatePickerController {
 
   /// Calculate the number of pixels that needs to be scrolled to go to the
   /// date provided in the argument
-  double _calculateDateOffset(DateTime date) {
+  double _calculateDateOffset(DateTime date, {bool scrollOneDayAhead = false}) {
     //Remove time from startDate
     final startDate = _datePickerState!.widget.startDate.dateWithoutTime();
 
     //Get offset between dates
     int offset = date.difference(startDate).inDays;
+
+    //Check if there we are going to scroll one date further
+    if (scrollOneDayAhead && offset <= _datePickerState!.widget.daysCount) {
+      offset++;
+    }
 
     //Get widget size and set the date as second to the right
     double width = _datePickerState!.context.size!.width;
@@ -402,7 +407,8 @@ class DatePickerController {
     double widgetMargin = _datePickerState!.widget.widgetMargin;
 
     //Find how many dates are showing, using with of widget
-    double numInWidth = width / (_datePickerState!.widget.width + widgetMargin * 2);
+    double numInWidth =
+        width / (_datePickerState!.widget.width + widgetMargin * 2);
     double numInWidthDecimal = numInWidth - numInWidth.toInt();
     int daysToEnd = _datePickerState!.widget.daysCount - offset;
 
@@ -419,6 +425,9 @@ class DatePickerController {
 
     return (offset * _datePickerState!.widget.width) +
         (offset * widgetMargin * 2) +
-        (daysToEnd <= 2 ? ((_datePickerState!.widget.width) * (1-numInWidthDecimal)) + widgetMargin : widgetMargin); //Offset for the first item
+        (daysToEnd <= 2
+            ? ((_datePickerState!.widget.width) * (1 - numInWidthDecimal)) +
+                widgetMargin
+            : widgetMargin); //Offset for the first item
   }
 }

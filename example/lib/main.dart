@@ -44,7 +44,8 @@ class _MyHomePageState extends State<MyHomePage> {
       floatingActionButton: FloatingActionButton(
         child: Icon(Icons.replay),
         onPressed: () {
-          _controller.animateToSelection();
+          //_controller.animateToSelection(scrollOneExtraPosition: true);
+          _controller.jumpToSelection(scrollOneExtraPosition: true);
         },
       ),
         appBar: AppBar(
@@ -65,7 +66,7 @@ class _MyHomePageState extends State<MyHomePage> {
             }
           },
           child: Container(
-            //padding: EdgeInsets.all(26.0),
+            //padding: EdgeInsets.all(41.0),
             color: Colors.blueGrey[100],
             child: Column(
               children: <Widget>[
