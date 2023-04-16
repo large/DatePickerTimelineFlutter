@@ -102,7 +102,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
                 TextButton(onPressed: () {
                   Duration duration = Duration(days: -3);
-                  _controller.setDateAndAnimate(DateTime.now().add(duration));
+                  _controller.setDateAndAnimate(DateTime.now().add(duration), scrollOneExtraPosition: true);
                 }, child: Text("Select today minus 3 days")),
                 Text("Swipe right and left to move dates"),
               ],

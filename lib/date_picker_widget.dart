@@ -76,6 +76,9 @@ class DatePicker extends StatefulWidget {
   /// Padding between widget
   final double widgetMargin;
 
+  /// Scroll extra day
+  final bool scrollExtraDay;
+
   DatePicker(
     this.startDate, {
     Key? key,
@@ -99,6 +102,7 @@ class DatePicker extends StatefulWidget {
     this.reverseDays = false,
     this.widgetMargin = 3,
     this.swipeTimeout = const Duration(milliseconds: 1000),
+    this.scrollExtraDay = true,
   }) : assert(
             activeDates == null || inactiveDates == null,
             "Can't "
@@ -156,7 +160,8 @@ class _DatePickerState extends State<DatePicker> {
   /// Called after build and will ensure the item selected is scrolled to
   void _onAfterBuild(BuildContext context) {
     if (startUp) {
-      widget.controller!.animateToSelection();
+      widget.controller!
+          .animateToSelection(scrollOneExtraPosition: widget.scrollExtraDay);
       startUp = false;
     }
   }
@@ -292,8 +297,9 @@ class DatePickerController {
         'DatePickerController is not attached to any DatePicker View.');
 
     // jump to the current Date
-    _datePickerState!._controller
-        .jumpTo(_calculateDateOffset(_datePickerState!._currentDate!, scrollOneDayAhead: scrollOneExtraPosition));
+    _datePickerState!._controller.jumpTo(_calculateDateOffset(
+        _datePickerState!._currentDate!,
+        scrollOneDayAhead: scrollOneExtraPosition));
   }
 
   /// This function will animate the Timeline to the currently selected Date
@@ -316,30 +322,37 @@ class DatePickerController {
   /// In case a date is out of range nothing will happen
   void animateToDate(DateTime date,
       {duration = const Duration(milliseconds: 500),
-      curve = Curves.easeInOut}) {
+      curve = Curves.easeInOut,
+      bool scrollOneExtraPosition = false}) {
     assert(_datePickerState != null,
         'DatePickerController is not attached to any DatePicker View.');
 
     //Ignore timestamp in DateTime
     date = date.dateWithoutTime();
 
-    _datePickerState!._controller.animateTo(_calculateDateOffset(date),
-        duration: duration, curve: curve);
+    //Animate based on selection
+    _datePickerState!._controller.animateTo(
+        _calculateDateOffset(date, scrollOneDayAhead: scrollOneExtraPosition),
+        duration: duration,
+        curve: curve);
   }
 
   /// This function will animate to any date that is passed as an argument
   /// this will also set that date as the current selected date
   void setDateAndAnimate(DateTime date,
       {duration = const Duration(milliseconds: 500),
-      curve = Curves.easeInOut}) {
+      curve = Curves.easeInOut,
+      bool scrollOneExtraPosition = false}) {
     assert(_datePickerState != null,
         'DatePickerController is not attached to any DatePicker View.');
 
     //Ignore timestamp in DateTime
     date = date.dateWithoutTime();
 
-    _datePickerState!._controller.animateTo(_calculateDateOffset(date),
-        duration: duration, curve: curve);
+    _datePickerState!._controller.animateTo(
+        _calculateDateOffset(date, scrollOneDayAhead: scrollOneExtraPosition),
+        duration: duration,
+        curve: curve);
 
     if (date.compareTo(_datePickerState!.widget.startDate) >= 0 &&
         date.compareTo(_datePickerState!.widget.startDate
