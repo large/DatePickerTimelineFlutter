@@ -80,7 +80,7 @@ class DatePicker extends StatefulWidget {
   final bool scrollExtraDay;
 
   //Scrollphysics (change behaviour of Listview scrolling)
-  final ScrollPhysics? scrollPhysics;
+  final ScrollBehavior? scrollBehavior;
 
   DatePicker(
     this.startDate, {
@@ -106,7 +106,7 @@ class DatePicker extends StatefulWidget {
     this.widgetMargin = 3,
     this.swipeTimeout = const Duration(milliseconds: 1000),
     this.scrollExtraDay = true,
-    this.scrollPhysics,
+    this.scrollBehavior,
   }) : assert(
             activeDates == null || inactiveDates == null,
             "Can't "
@@ -179,92 +179,94 @@ class _DatePickerState extends State<DatePicker> {
 
     return Container(
       height: widget.height,
-      child: ListView.builder(
-        //Padding zero is important in landscape mode!
-        physics: widget.scrollPhysics,
-        padding: EdgeInsets.zero,
-        reverse: widget.reverseDays,
-        itemCount: widget.daysCount,
-        scrollDirection: Axis.horizontal,
-        controller: _controller,
-        itemBuilder: (context, index) {
-          // get the date object based on the index position
-          // if widget.startDate is null then use the initialDateValue
-          DateTime date;
-          //Duration removed because of daylight saving will mess things up
-          //DateTime _date = widget.startDate.add(Duration(days: index));
-          DateTime _date = widget.startDate.addDays(index);
-          date = _date.dateWithoutTime();
+      child: ScrollConfiguration(
+        behavior: widget.scrollBehavior == null ? MaterialScrollBehavior() : widget.scrollBehavior!,
+        child: ListView.builder(
+          //Padding zero is important in landscape mode!
+          padding: EdgeInsets.zero,
+          reverse: widget.reverseDays,
+          itemCount: widget.daysCount,
+          scrollDirection: Axis.horizontal,
+          controller: _controller,
+          itemBuilder: (context, index) {
+            // get the date object based on the index position
+            // if widget.startDate is null then use the initialDateValue
+            DateTime date;
+            //Duration removed because of daylight saving will mess things up
+            //DateTime _date = widget.startDate.add(Duration(days: index));
+            DateTime _date = widget.startDate.addDays(index);
+            date = _date.dateWithoutTime();
 
-          bool isDeactivated = false;
+            bool isDeactivated = false;
 
-          // check if this date needs to be deactivated for only DeactivatedDates
-          if (widget.inactiveDates != null) {
-            for (DateTime inactiveDate in widget.inactiveDates!) {
-              if (date.compareDateWithoutTime(inactiveDate)) {
-                isDeactivated = true;
-                break;
+            // check if this date needs to be deactivated for only DeactivatedDates
+            if (widget.inactiveDates != null) {
+              for (DateTime inactiveDate in widget.inactiveDates!) {
+                if (date.compareDateWithoutTime(inactiveDate)) {
+                  isDeactivated = true;
+                  break;
+                }
               }
             }
-          }
 
-          // check if this date needs to be deactivated for only ActivatedDates
-          if (widget.activeDates != null) {
-            isDeactivated = true;
-            for (DateTime activateDate in widget.activeDates!) {
-              // Compare the date if it is in the
-              if (date.compareDateWithoutTime(activateDate)) {
-                isDeactivated = false;
-                break;
+            // check if this date needs to be deactivated for only ActivatedDates
+            if (widget.activeDates != null) {
+              isDeactivated = true;
+              for (DateTime activateDate in widget.activeDates!) {
+                // Compare the date if it is in the
+                if (date.compareDateWithoutTime(activateDate)) {
+                  isDeactivated = false;
+                  break;
+                }
               }
             }
-          }
 
-          // Check if this date is the one that is currently selected
-          bool isSelected = _currentDate != null
-              ? date.compareDateWithoutTime(_currentDate!)
-              : false;
+            // Check if this date is the one that is currently selected
+            bool isSelected = _currentDate != null
+                ? date.compareDateWithoutTime(_currentDate!)
+                : false;
 
-          // Check if a swipe date is set
-          bool isSwipeSelected = _swipeCurrentDate != null
-              ? date.compareDateWithoutTime(_swipeCurrentDate!)
-              : false;
+            // Check if a swipe date is set
+            bool isSwipeSelected = _swipeCurrentDate != null
+                ? date.compareDateWithoutTime(_swipeCurrentDate!)
+                : false;
 
-          // Return the Date Widget
-          return DateWidget(
-            date: date,
-            margin: widget.widgetMargin,
-            monthTextStyle: isDeactivated
-                ? deactivatedMonthStyle
-                : isSelected
-                    ? selectedMonthStyle
-                    : widget.monthTextStyle,
-            dateTextStyle: isDeactivated
-                ? deactivatedDateStyle
-                : isSelected
-                    ? selectedDateStyle
-                    : widget.dateTextStyle,
-            dayTextStyle: isDeactivated
-                ? deactivatedDayStyle
-                : isSelected
-                    ? selectedDayStyle
-                    : widget.dayTextStyle,
-            width: widget.width,
-            locale: widget.locale,
-            selectionColor: isSelected
-                ? widget.selectionColor
-                : isSwipeSelected
-                    ? widget.swipeSelectionColor
-                    : widget.backgroundColor,
-            onDateSelected: (selectedDate) {
-              // Don't notify listener if date is deactivated
-              if (isDeactivated) return;
+            // Return the Date Widget
+            return DateWidget(
+              date: date,
+              margin: widget.widgetMargin,
+              monthTextStyle: isDeactivated
+                  ? deactivatedMonthStyle
+                  : isSelected
+                      ? selectedMonthStyle
+                      : widget.monthTextStyle,
+              dateTextStyle: isDeactivated
+                  ? deactivatedDateStyle
+                  : isSelected
+                      ? selectedDateStyle
+                      : widget.dateTextStyle,
+              dayTextStyle: isDeactivated
+                  ? deactivatedDayStyle
+                  : isSelected
+                      ? selectedDayStyle
+                      : widget.dayTextStyle,
+              width: widget.width,
+              locale: widget.locale,
+              selectionColor: isSelected
+                  ? widget.selectionColor
+                  : isSwipeSelected
+                      ? widget.swipeSelectionColor
+                      : widget.backgroundColor,
+              onDateSelected: (selectedDate) {
+                // Don't notify listener if date is deactivated
+                if (isDeactivated) return;
 
-              //Call the onDateSelected
-              onDateSelected(selectedDate);
-            },
-          );
-        },
+                //Call the onDateSelected
+                onDateSelected(selectedDate);
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -419,8 +421,7 @@ class DatePickerController {
     }
 
     //Get widget size and set the date as second to the right
-    //double width = _datePickerState!.context.size!.width;
-    double width = MediaQuery.of(_datePickerState!.context).size.width;
+    double width = _datePickerState!.context.size!.width;
 
     //margin: defaults to margin: EdgeInsets.all(3.0), remember it is on both sides
     double widgetMargin = _datePickerState!.widget.widgetMargin;
@@ -446,7 +447,7 @@ class DatePickerController {
     return (offset * _datePickerState!.widget.width) +
         (offset *
             widgetMargin *
-            2) + //- (daysToEnd < 1 ? widgetMargin : 0) + //-2 is here a small error of some sorts?
+            2) + widgetMargin/2 + //Start item is always widgetMargin/2
         (daysToEnd <= 2
             ? ((_datePickerState!.widget.width) * (1 - numInWidthDecimal)) +
                 widgetMargin
