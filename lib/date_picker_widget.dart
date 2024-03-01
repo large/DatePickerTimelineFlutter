@@ -79,6 +79,9 @@ class DatePicker extends StatefulWidget {
   /// Scroll extra day
   final bool scrollExtraDay;
 
+  //Scrollphysics (change behaviour of Listview scrolling)
+  final ScrollPhysics? scrollPhysics;
+
   DatePicker(
     this.startDate, {
     Key? key,
@@ -103,6 +106,7 @@ class DatePicker extends StatefulWidget {
     this.widgetMargin = 3,
     this.swipeTimeout = const Duration(milliseconds: 1000),
     this.scrollExtraDay = true,
+    this.scrollPhysics,
   }) : assert(
             activeDates == null || inactiveDates == null,
             "Can't "
@@ -177,6 +181,7 @@ class _DatePickerState extends State<DatePicker> {
       height: widget.height,
       child: ListView.builder(
         //Padding zero is important in landscape mode!
+        physics: widget.scrollPhysics,
         padding: EdgeInsets.zero,
         reverse: widget.reverseDays,
         itemCount: widget.daysCount,
@@ -414,7 +419,8 @@ class DatePickerController {
     }
 
     //Get widget size and set the date as second to the right
-    double width = _datePickerState!.context.size!.width;
+    //double width = _datePickerState!.context.size!.width;
+    double width = MediaQuery.of(_datePickerState!.context).size.width;
 
     //margin: defaults to margin: EdgeInsets.all(3.0), remember it is on both sides
     double widgetMargin = _datePickerState!.widget.widgetMargin;
@@ -432,12 +438,15 @@ class DatePickerController {
       //Last day(s) we do not increase, stay put
       if (daysToEnd == 2) offset = offset - 1;
       if (daysToEnd == 1) offset = offset - 2;
+      if (daysToEnd == 0) offset = offset - 3;
     } else {
       offset = 0;
     }
 
     return (offset * _datePickerState!.widget.width) +
-        (offset * widgetMargin * 2) +
+        (offset *
+            widgetMargin *
+            2) + //- (daysToEnd < 1 ? widgetMargin : 0) + //-2 is here a small error of some sorts?
         (daysToEnd <= 2
             ? ((_datePickerState!.widget.width) * (1 - numInWidthDecimal)) +
                 widgetMargin

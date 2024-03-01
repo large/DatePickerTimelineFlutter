@@ -80,7 +80,8 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
                 DatePicker(
                   DateTime.now().add(duration),
-                  daysCount: 30,
+                  scrollPhysics: ClampingScrollPhysics(), //Removes the strech in scrolling
+                  daysCount: 35,
                   width: 60,
                   height: 80,
                   controller: _controller,
